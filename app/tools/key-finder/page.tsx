@@ -30,7 +30,7 @@ export default function KeyFinderPage() {
   }
 
   const getNoteFromIndex = (index: number): string => {
-    return OCTAVE_RANGE[index] || note
+    return OCTAVE_RANGE[index] || 'C4'
   }
 
   const transposeNote = (note: string, semitones: number): string => {
