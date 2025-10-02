@@ -96,6 +96,8 @@ export default function SheetMusicPage() {
 
       if (result.success && result.text) {
         setOutputText(result.text)
+        setSuccess(`Transposed by ${semitones > 0 ? '+' : ''}${semitones} semitones`)
+        setTimeout(() => setSuccess(''), 3000)
       } else {
         setError(result.error || 'Failed to transpose')
       }
@@ -155,7 +157,7 @@ export default function SheetMusicPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 min-h-[calc(100vh-400px)]">
           {/* Left Column - Upload */}
           <div className="space-y-6">
             <div className="card p-6">
@@ -188,8 +190,8 @@ export default function SheetMusicPage() {
           </div>
 
           {/* Right Column - Output */}
-          <div className="space-y-6">
-            <div className="card p-6">
+          <div className="space-y-6 flex flex-col">
+            <div className="card p-6 flex-1 flex flex-col">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">
                   Planning Center Output
@@ -204,11 +206,14 @@ export default function SheetMusicPage() {
                 )}
               </div>
               
-              <OutputEditor
-                value={outputText}
-                onChange={setOutputText}
-                placeholder="Your converted sheet music will appear here..."
-              />
+              <div className="flex-1 flex flex-col">
+                <OutputEditor
+                  value={outputText}
+                  onChange={setOutputText}
+                  placeholder="Your converted sheet music will appear here..."
+                  className="flex-1"
+                />
+              </div>
             </div>
 
             {/* Transpose Controls */}

@@ -18,14 +18,15 @@ export const processSheetMusic = async (imageBase64: string) => {
 
 1. All chord symbols with precise placement
 2. Lyrics with syllable-by-syllable chord alignment
-3. Song structure sections (VERSE 1, VERSE 2, CHORUS, BRIDGE, etc.)
+3. Song structure sections using standard names: VERSE 1, VERSE 2, CHORUS, BRIDGE, etc.
 
 Output in Planning Center Services format following these rules:
 - Chords in square brackets: [C], [G7], [F/C], [Am]
-- Place chords directly before the syllable they occur on
+- Place the chord bracket immediately before the syllable where the chord change occurs
 - Break words into syllables when chords change mid-word: [C]A-[F/C]maz-[C]ing
-- Section headers in ALL CAPS on their own line
+- Section headers in ALL CAPS on their own line (use standard names: VERSE 1, VERSE 2, CHORUS, BRIDGE, INTRO, OUTRO, etc.)
 - Preserve exact lyric spacing and line breaks
+- Ensure chord placement is precise - chords should align with the exact syllable where the change happens
 
 Example output:
 VERSE 1
