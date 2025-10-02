@@ -14,7 +14,7 @@ const SONG_TYPES = ['Worship', 'Announcement', 'Sermon', 'Offering', 'Other']
 
 export default function SetlistTimerPage() {
   const [songs, setSongs] = useState<Song[]>([])
-  const [newSong, setNewSong] = useState({ title: '', duration: '03:30', type: 'Worship' as const })
+  const [newSong, setNewSong] = useState<{ title: string; duration: string; type: Song['type'] }>({ title: '', duration: '03:30', type: 'Worship' })
   const [isAdding, setIsAdding] = useState(false)
 
   // Calculate total time
