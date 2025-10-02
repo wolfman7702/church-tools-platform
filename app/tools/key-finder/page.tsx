@@ -319,13 +319,15 @@ export default function KeyFinderPage() {
                           </div>
                           
                           <div className="relative h-4 bg-gray-200 rounded-full overflow-hidden">
-                            <div 
-                              className="absolute top-0 h-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full"
-                              style={{
-                                left: `${range.startPercent}%`,
-                                width: `${range.widthPercent}%`
-                              }}
-                            ></div>
+                            {range && typeof range === 'object' && (
+                              <div 
+                                className="absolute top-0 h-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full"
+                                style={{
+                                  left: `${range.startPercent}%`,
+                                  width: `${range.widthPercent}%`
+                                }}
+                              ></div>
+                            )}
                           </div>
 
                           {result.strainedNotes > 0 && (
