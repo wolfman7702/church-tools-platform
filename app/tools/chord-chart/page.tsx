@@ -1,13 +1,21 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { Copy, Download, Music, Plus, Trash2 } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Copy, Download, Music, Plus, Trash2, X } from 'lucide-react'
 
 interface ChordPosition {
   id: string
   chord: string
   position: number
-  wordIndex: number
+  section: string
+}
+
+interface Section {
+  id: string
+  type: 'verse' | 'chorus' | 'bridge' | 'intro' | 'outro'
+  title: string
+  content: string
+  chords: ChordPosition[]
 }
 
 const CHORD_OPTIONS = [
@@ -21,76 +29,151 @@ const CHORD_OPTIONS = [
   'Caug', 'C#aug', 'Dbaug', 'Daug', 'D#aug', 'Ebaug', 'Eaug', 'Faug', 'F#aug', 'Gbaug', 'Gaug', 'G#aug', 'Abaug', 'Aaug', 'A#aug', 'Bbaug', 'Baug'
 ]
 
+const SECTION_TYPES = [
+  { type: 'verse', label: 'Add Verse', icon: '📝' },
+  { type: 'chorus', label: 'Add Chorus', icon: '🎵' },
+  { type: 'bridge', label: 'Add Bridge', icon: '🌉' },
+  { type: 'intro', label: 'Add Intro', icon: '🎼' },
+  { type: 'outro', label: 'Add Outro', icon: '🎶' }
+]
+
 export default function ChordChartPage() {
-  const [lyrics, setLyrics] = useState('')
-  const [chordPositions, setChordPositions] = useState<ChordPosition[]>([])
-  const [selectedWordIndex, setSelectedWordIndex] = useState<number | null>(null)
+  const [sections, setSections] = useState<Section[]>([])
+  const [activeSection, setActiveSection] = useState<string | null>(null)
   const [showChordPicker, setShowChordPicker] = useState(false)
   const [chordPickerPosition, setChordPickerPosition] = useState({ x: 0, y: 0 })
+  const [selectedPosition, setSelectedPosition] = useState<{ sectionId: string; position: number } | null>(null)
   const [outputText, setOutputText] = useState('')
   const [copied, setCopied] = useState(false)
-  const lyricsRef = useRef<HTMLTextAreaElement>(null)
+  const contentEditableRef = useRef<HTMLDivElement>(null)
 
-  const words = lyrics.split(/\s+/).filter(word => word.length > 0)
+  const addSection = (type: Section['type']) => {
+    const newSection: Section = {
+      id: Date.now().toString(),
+      type,
+      title: type.toUpperCase(),
+      content: '',
+      chords: []
+    }
+    setSections([...sections, newSection])
+    setActiveSection(newSection.id)
+  }
+
+  const updateSectionContent = (sectionId: string, content: string) => {
+    setSections(sections.map(section => 
+      section.id === sectionId 
+        ? { ...section, content }
+        : section
+    ))
+    updateOutput()
+  }
+
+  const handleTextClick = (sectionId: string, event: React.MouseEvent) => {
+    const target = event.target as HTMLElement
+    const rect = target.getBoundingClientRect()
+    const clickX = event.clientX - rect.left
+    
+    // Calculate approximate character position based on click position
+    const textContent = target.textContent || ''
+    const charWidth = rect.width / textContent.length
+    const position = Math.floor(clickX / charWidth)
+    
+    setChordPickerPosition({
+      x: event.clientX,
+      y: event.clientY - 10
+    })
+    setSelectedPosition({ sectionId, position })
+    setShowChordPicker(true)
+  }
 
   const addChord = (chord: string) => {
-    if (selectedWordIndex === null) return
+    if (!selectedPosition) return
 
     const newChord: ChordPosition = {
       id: Date.now().toString(),
       chord,
-      position: selectedWordIndex,
-      wordIndex: selectedWordIndex
+      position: selectedPosition.position,
+      section: selectedPosition.sectionId
     }
 
-    setChordPositions([...chordPositions, newChord])
+    setSections(sections.map(section => 
+      section.id === selectedPosition.sectionId
+        ? { ...section, chords: [...section.chords, newChord] }
+        : section
+    ))
+
     setShowChordPicker(false)
-    setSelectedWordIndex(null)
+    setSelectedPosition(null)
     updateOutput()
   }
 
-  const removeChord = (id: string) => {
-    setChordPositions(chordPositions.filter(chord => chord.id !== id))
+  const removeChord = (chordId: string) => {
+    setSections(sections.map(section => ({
+      ...section,
+      chords: section.chords.filter(chord => chord.id !== chordId)
+    })))
     updateOutput()
   }
 
-  const handleWordClick = (wordIndex: number, event: React.MouseEvent) => {
-    const rect = event.currentTarget.getBoundingClientRect()
-    setChordPickerPosition({
-      x: rect.left + rect.width / 2,
-      y: rect.top - 10
-    })
-    setSelectedWordIndex(wordIndex)
-    setShowChordPicker(true)
+  const deleteSection = (sectionId: string) => {
+    setSections(sections.filter(section => section.id !== sectionId))
+    if (activeSection === sectionId) {
+      setActiveSection(sections.length > 1 ? sections[0].id : null)
+    }
+    updateOutput()
   }
 
   const updateOutput = () => {
-    if (!lyrics) {
-      setOutputText('')
-      return
-    }
-
-    const words = lyrics.split(/\s+/)
     let output = ''
     
-    for (let i = 0; i < words.length; i++) {
-      const chordsForWord = chordPositions
-        .filter(chord => chord.wordIndex === i)
-        .sort((a, b) => a.position - b.position)
-      
-      if (chordsForWord.length > 0) {
-        const chordString = chordsForWord.map(chord => `[${chord.chord}]`).join('')
-        output += chordString + words[i]
+    sections.forEach(section => {
+      if (section.type === 'intro' || section.type === 'outro') {
+        // For intro/outro, just show chords
+        if (section.chords.length > 0) {
+          output += `${section.title}\n`
+          const chordString = section.chords
+            .sort((a, b) => a.position - b.position)
+            .map(chord => `[${chord.chord}]`)
+            .join(' ')
+          output += `${chordString}\n\n`
+        }
       } else {
-        output += words[i]
+        // For verses, chorus, bridge - show chords above lyrics
+        if (section.content || section.chords.length > 0) {
+          output += `${section.title}\n`
+          
+          if (section.chords.length > 0) {
+            // Create chord line
+            const chordLine = createChordLine(section.content, section.chords)
+            output += `${chordLine}\n`
+          }
+          
+          if (section.content) {
+            output += `${section.content}\n`
+          }
+          output += '\n'
+        }
       }
-      
-      if (i < words.length - 1) {
-        output += ' '
-      }
-    }
+    })
 
     setOutputText(output)
+  }
+
+  const createChordLine = (content: string, chords: ChordPosition[]) => {
+    if (!content) return ''
+    
+    const sortedChords = chords.sort((a, b) => a.position - b.position)
+    let chordLine = ''
+    let lastPosition = 0
+    
+    sortedChords.forEach(chord => {
+      // Add spaces to align chord with text
+      const spacesNeeded = Math.max(0, chord.position - lastPosition)
+      chordLine += ' '.repeat(spacesNeeded) + `[${chord.chord}]`
+      lastPosition = chord.position + chord.chord.length + 2 // +2 for brackets
+    })
+    
+    return chordLine
   }
 
   const copyToClipboard = async () => {
@@ -114,15 +197,24 @@ export default function ChordChartPage() {
   }
 
   const clearAll = () => {
-    setLyrics('')
-    setChordPositions([])
+    setSections([])
+    setActiveSection(null)
     setOutputText('')
   }
 
-  // Update output when lyrics or chords change
-  useState(() => {
+  // Update output when sections change
+  useEffect(() => {
     updateOutput()
-  })
+  }, [sections])
+
+  const getTotalChords = () => {
+    return sections.reduce((total, section) => total + section.chords.length, 0)
+  }
+
+  const getUniqueChords = () => {
+    const allChords = sections.flatMap(section => section.chords.map(chord => chord.chord))
+    return new Set(allChords).size
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -133,89 +225,171 @@ export default function ChordChartPage() {
             Chord Chart Generator
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Create beautiful chord charts with visual chord placement and Planning Center export
+            Create beautiful chord charts with click-to-insert chords and Planning Center export
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Side - Lyrics Editor */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 min-h-[calc(100vh-200px)]">
+          {/* Left Side - Editor */}
           <div className="space-y-6">
+            {/* Section Header Buttons */}
             <div className="card p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Lyrics Editor
-                </h2>
-                <button
-                  onClick={clearAll}
-                  className="px-3 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors flex items-center"
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Clear All
-                </button>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Add Sections
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {SECTION_TYPES.map(({ type, label, icon }) => (
+                  <button
+                    key={type}
+                    onClick={() => addSection(type as Section['type'])}
+                    className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-primary-500 to-secondary-500 text-white rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-200 font-medium"
+                  >
+                    <span className="text-lg">{icon}</span>
+                    <span className="text-sm">{label}</span>
+                  </button>
+                ))}
               </div>
-              
-              <textarea
-                ref={lyricsRef}
-                value={lyrics}
-                onChange={(e) => {
-                  setLyrics(e.target.value)
-                  updateOutput()
-                }}
-                placeholder="Paste your lyrics here... Each line will be treated as a separate line in the output."
-                className="w-full h-64 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-              />
             </div>
 
-            {/* Chord Placement Interface */}
-            {lyrics && (
+            {/* Sections List */}
+            {sections.length > 0 && (
               <div className="card p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Click on words to add chords
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Song Sections
+                  </h2>
+                  <button
+                    onClick={clearAll}
+                    className="px-3 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors flex items-center"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Clear All
+                  </button>
+                </div>
                 
                 <div className="space-y-4">
-                  {words.map((word, index) => {
-                    const chordsForWord = chordPositions.filter(chord => chord.wordIndex === index)
-                    
-                    return (
-                      <div key={index} className="flex items-center space-x-2">
-                        <div className="flex flex-wrap items-center space-x-1">
-                          {chordsForWord.map((chord) => (
-                            <span
-                              key={chord.id}
-                              className="inline-flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-lg"
-                            >
-                              <span>{chord.chord}</span>
-                              <button
-                                onClick={() => removeChord(chord.id)}
-                                className="text-blue-600 hover:text-blue-800"
-                              >
-                                ×
-                              </button>
-                            </span>
-                          ))}
+                  {sections.map((section) => (
+                    <div
+                      key={section.id}
+                      className={`p-4 border-2 rounded-lg transition-all duration-200 ${
+                        activeSection === section.id
+                          ? 'border-primary-500 bg-primary-50'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-gray-900 flex items-center">
+                          <span className="mr-2">
+                            {SECTION_TYPES.find(s => s.type === section.type)?.icon}
+                          </span>
+                          {section.title}
+                        </h3>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => setActiveSection(section.id)}
+                            className="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteSection(section.id)}
+                            className="p-1 text-red-600 hover:text-red-800 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
-                        
-                        <button
-                          onClick={(e) => handleWordClick(index, e)}
-                          className="px-3 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                        >
-                          {word}
-                        </button>
                       </div>
-                    )
-                  })}
+
+                      {activeSection === section.id && (
+                        <div className="space-y-3">
+                          {section.type === 'intro' || section.type === 'outro' ? (
+                            <div>
+                              <p className="text-sm text-gray-600 mb-2">
+                                Add chords for {section.type} (no lyrics needed):
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {section.chords.map((chord) => (
+                                  <span
+                                    key={chord.id}
+                                    className="inline-flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-lg"
+                                  >
+                                    <span>{chord.chord}</span>
+                                    <button
+                                      onClick={() => removeChord(chord.id)}
+                                      className="text-blue-600 hover:text-blue-800"
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                ))}
+                                <button
+                                  onClick={() => {
+                                    setSelectedPosition({ sectionId: section.id, position: 0 })
+                                    setShowChordPicker(true)
+                                  }}
+                                  className="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                                >
+                                  + Add Chord
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <div
+                                ref={contentEditableRef}
+                                contentEditable
+                                onInput={(e) => updateSectionContent(section.id, e.currentTarget.textContent || '')}
+                                onClick={(e) => handleTextClick(section.id, e)}
+                                className="w-full min-h-[100px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none whitespace-pre-wrap"
+                                style={{ minHeight: '100px' }}
+                                suppressContentEditableWarning={true}
+                              >
+                                {section.content}
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Click anywhere in the text to add chords
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Show chords for this section */}
+                      {section.chords.length > 0 && (
+                        <div className="mt-3">
+                          <div className="flex flex-wrap gap-1">
+                            {section.chords
+                              .sort((a, b) => a.position - b.position)
+                              .map((chord) => (
+                                <span
+                                  key={chord.id}
+                                  className="inline-flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-lg"
+                                >
+                                  <span>{chord.chord}</span>
+                                  <button
+                                    onClick={() => removeChord(chord.id)}
+                                    className="text-blue-600 hover:text-blue-800"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Right Side - Output */}
+          {/* Right Side - Preview */}
           <div className="space-y-6">
-            <div className="card p-6">
+            <div className="card p-6 flex-1 flex flex-col">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  Planning Center Output
+                  Planning Center Preview
                 </h2>
                 <div className="flex space-x-2">
                   <button
@@ -245,38 +419,51 @@ export default function ChordChartPage() {
                 </div>
               </div>
               
-              <div className="bg-gray-50 rounded-lg p-4 min-h-[200px]">
+              <div className="flex-1 bg-gray-50 rounded-lg p-4 min-h-[400px]">
                 {outputText ? (
-                  <pre className="whitespace-pre-wrap text-sm font-mono text-gray-900">
+                  <pre className="whitespace-pre-wrap text-sm font-mono text-gray-900 leading-relaxed">
                     {outputText}
                   </pre>
                 ) : (
                   <div className="text-gray-500 text-center py-8">
                     <Music className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                     <p>Your chord chart will appear here</p>
+                    <p className="text-sm mt-2">Add sections and start creating your chord chart</p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Chord Statistics */}
-            {chordPositions.length > 0 && (
+            {/* Statistics */}
+            {sections.length > 0 && (
               <div className="card p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Chord Statistics
+                  Statistics
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-primary-600">
-                      {chordPositions.length}
+                      {sections.length}
+                    </div>
+                    <div className="text-sm text-gray-600">Sections</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary-600">
+                      {getTotalChords()}
                     </div>
                     <div className="text-sm text-gray-600">Total Chords</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-primary-600">
-                      {new Set(chordPositions.map(c => c.chord)).size}
+                      {getUniqueChords()}
                     </div>
                     <div className="text-sm text-gray-600">Unique Chords</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary-600">
+                      {outputText.length}
+                    </div>
+                    <div className="text-sm text-gray-600">Characters</div>
                   </div>
                 </div>
               </div>
@@ -287,12 +474,12 @@ export default function ChordChartPage() {
         {/* Chord Picker Modal */}
         {showChordPicker && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-96 overflow-y-auto">
+            <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Select Chord
               </h3>
               
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-6 gap-2">
                 {CHORD_OPTIONS.map((chord) => (
                   <button
                     key={chord}
@@ -322,28 +509,37 @@ export default function ChordChartPage() {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               How to create chord charts
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="text-center">
                 <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-3">
                   <span className="text-primary-600 font-bold text-lg">1</span>
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Paste Lyrics</h4>
+                <h4 className="font-semibold text-gray-900 mb-2">Add Sections</h4>
                 <p className="text-sm text-gray-600">
-                  Copy and paste your song lyrics into the editor
+                  Add verses, chorus, bridge, intro, or outro sections
                 </p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-3">
                   <span className="text-primary-600 font-bold text-lg">2</span>
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Add Chords</h4>
+                <h4 className="font-semibold text-gray-900 mb-2">Add Lyrics</h4>
                 <p className="text-sm text-gray-600">
-                  Click on words to add chords above them
+                  Type or paste your lyrics into each section
                 </p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-3">
                   <span className="text-primary-600 font-bold text-lg">3</span>
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-2">Add Chords</h4>
+                <p className="text-sm text-gray-600">
+                  Click anywhere in the text to insert chords
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <span className="text-primary-600 font-bold text-lg">4</span>
                 </div>
                 <h4 className="font-semibold text-gray-900 mb-2">Export</h4>
                 <p className="text-sm text-gray-600">

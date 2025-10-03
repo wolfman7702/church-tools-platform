@@ -105,9 +105,9 @@ export default function OutputEditor({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           className={`
-            w-full min-h-[600px] h-auto p-4 border border-gray-300 rounded-lg font-mono text-sm
+            font-mono text-sm whitespace-pre-wrap w-full min-h-[600px] h-auto p-4 border border-gray-300 rounded-lg
             focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none
-            resize-none overflow-hidden
+            resize-y overflow-hidden
             ${className.includes('flex-1') ? 'h-[calc(100vh-300px)]' : ''}
             ${isDarkMode 
               ? 'bg-gray-900 text-gray-100 border-gray-700 placeholder-gray-500' 
