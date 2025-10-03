@@ -82,8 +82,10 @@ export function detectKey(text: string): string {
   const chords = text.match(/\[([^\]]+)\]/g) || []
   if (chords.length === 0) return 'C'
   
-  // Get first chord, strip modifiers
-  const firstChord = chords[0].replace(/[\[\]]/g, '')
+  // Get first chord, strip brackets - add safety check
+  const firstChord = chords[0]?.replace(/[\[\]]/g, '')
+  if (!firstChord) return 'C'
+  
   const root = firstChord.match(/^([A-G][#b]?)/)?.[1] || 'C'
   return root
 }
