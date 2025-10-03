@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Upload, Loader2, CheckCircle, AlertCircle, Copy, FileText, FileDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { jsPDF } from 'jspdf'
@@ -13,6 +13,14 @@ import { canUserConvert, incrementConversionCount } from '@/lib/usage-tracking'
 import { detectKey, transposeText } from '@/lib/music-theory'
 
 const KEYS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
+
+const COMMON_CHORDS = [
+  'C', 'D', 'E', 'F', 'G', 'A', 'B',
+  'Cm', 'Dm', 'Em', 'Fm', 'Gm', 'Am', 'Bm',
+  'C7', 'D7', 'G7', 'A7',
+  'Cmaj7', 'Dmaj7', 'Gmaj7', 'Amaj7',
+  'Csus', 'Dsus', 'Gsus', 'Asus'
+]
 
 // Validation function for output quality
 function validateOutput(text: string): { warnings: string[], fixed: string } {
@@ -68,6 +76,8 @@ export default function SheetMusicPage() {
   const [validationWarnings, setValidationWarnings] = useState<string[]>([])
   const [showChordPicker, setShowChordPicker] = useState(false)
   const [cursorPosition, setCursorPosition] = useState(0)
+  const [showQuickChord, setShowQuickChord] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Manual editing functions
   const handleClearChordsFromLine = () => {
@@ -99,6 +109,25 @@ export default function SheetMusicPage() {
     } catch (error) {
       toast.error('Failed to report error')
     }
+  }
+
+  // Quick chord insertion function
+  const insertChordAtCursor = (chord: string) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const text = outputText
+    
+    const newText = text.substring(0, start) + `[${chord}]` + text.substring(end)
+    setOutputText(newText)
+    
+    // Move cursor after inserted chord
+    setTimeout(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + chord.length + 2
+      textarea.focus()
+    }, 0)
   }
 
   const processImages = async () => {
@@ -134,7 +163,7 @@ export default function SheetMusicPage() {
           body: JSON.stringify({ image: base64 }),
         })
 
-        const result: ProcessSheetResponse = await response.json()
+        const result: any = await response.json()
 
         if (!result.success) {
           throw new Error(result.error || 'Failed to process image')
@@ -145,6 +174,16 @@ export default function SheetMusicPage() {
           if (i < uploadedFiles.length - 1) {
             combinedOutput += '\n\n---\n\n' // Page break between songs
           }
+        }
+
+        // Handle warnings from API
+        if (result.warning) {
+          console.warn(`⚠️ ${result.warning}`)
+          toast.warning(`${result.warning} - Please verify the output carefully.`)
+        }
+        
+        if (result.chordCount) {
+          console.log(`Detected ${result.chordCount} chords in output`)
         }
       }
 
@@ -556,13 +595,40 @@ And we won't be quiet, we shout out [Eb/F]Your [Bb]praise`
               
               <div className="flex-1 flex flex-col">
                 {viewMode === 'edit' ? (
-                  <textarea
-                    value={outputText}
-                    onChange={(e) => setOutputText(e.target.value)}
-                    onSelect={(e) => setCursorPosition(e.currentTarget.selectionStart)}
-                    className="w-full h-[600px] p-4 font-mono text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-y"
-                    placeholder="Processed output will appear here..."
-                  />
+                  <>
+                    {/* Quick Chord Insertion */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <button
+                        onClick={() => setShowQuickChord(!showQuickChord)}
+                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                      >
+                        Quick Add Chord
+                      </button>
+                      
+                      {showQuickChord && (
+                        <div className="flex gap-1 flex-wrap">
+                          {COMMON_CHORDS.map(chord => (
+                            <button
+                              key={chord}
+                              onClick={() => insertChordAtCursor(chord)}
+                              className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-blue-50"
+                            >
+                              {chord}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <textarea
+                      ref={textareaRef}
+                      value={outputText}
+                      onChange={(e) => setOutputText(e.target.value)}
+                      onSelect={(e) => setCursorPosition(e.currentTarget.selectionStart)}
+                      className="w-full h-[600px] p-4 font-mono text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-y"
+                      placeholder="Processed output will appear here..."
+                    />
+                  </>
                 ) : (
                   <div className="w-full h-[600px] p-4 bg-gray-900 text-gray-100 rounded-lg overflow-y-auto">
                     <pre className="font-mono text-sm whitespace-pre">

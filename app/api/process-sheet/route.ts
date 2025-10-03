@@ -29,9 +29,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({
-      success: true,
-      text: result.text
+    const extractedText = result.text
+
+    if (!extractedText) {
+      return NextResponse.json(
+        { success: false, error: 'No text extracted from image' },
+        { status: 500 }
+      )
+    }
+
+    // Basic validation
+    const chordCount = (extractedText.match(/\[/g) || []).length
+
+    if (chordCount < 5) {
+      console.warn('Very few chords detected:', chordCount)
+      // Still return it, but flag it
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      text: extractedText,
+      chordCount: chordCount,
+      warning: chordCount < 5 ? 'Low chord count detected - verify accuracy' : null
     })
 
   } catch (error) {
