@@ -19,8 +19,7 @@ export default function TransposeControls({ text, onTranspose, onReset }: Transp
   // Detect key from text when it changes
   useEffect(() => {
     if (text) {
-      const chords = text.match(/\[([^\]]+)\]/g)?.map(match => match.slice(1, -1)) || []
-      const detectedKey = detectKey(chords)
+      const detectedKey = detectKey(text)
       setCurrentKey(detectedKey)
       setSelectedKey(detectedKey)
     }
