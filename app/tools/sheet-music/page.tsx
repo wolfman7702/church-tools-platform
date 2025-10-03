@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Upload, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { Upload, Loader2, CheckCircle, AlertCircle, Copy, FileText, FileDown } from 'lucide-react'
 import { toast } from 'sonner'
+import { jsPDF } from 'jspdf'
 import ImageUpload from '@/components/ImageUpload'
 import UsageTracker from '@/components/UsageTracker'
 import EmailGateModal from '@/components/EmailGateModal'
@@ -24,6 +25,7 @@ export default function SheetMusicPage() {
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [currentKey, setCurrentKey] = useState('C')
   const [targetKey, setTargetKey] = useState('C')
+  const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit')
 
   const processImages = async () => {
     if (uploadedFiles.length === 0) {
@@ -167,6 +169,96 @@ And we won't be quiet, we shout out [Eb/F]Your [Bb]praise`
     toast.success('Example loaded!')
   }
 
+  // Export functions
+  const exportToTXT = () => {
+    const blob = new Blob([outputText], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'sheet-music-converted.txt'
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('TXT file downloaded!')
+  }
+
+  const exportToPDF = () => {
+    const doc = new jsPDF()
+    
+    // Set font to monospace for chord alignment
+    doc.setFont('courier')
+    doc.setFontSize(10)
+    
+    // Split text into lines and add to PDF
+    const lines = outputText.split('\n')
+    let y = 20
+    
+    for (let line of lines) {
+      if (y > 280) {
+        doc.addPage()
+        y = 20
+      }
+      doc.text(line, 10, y)
+      y += 5
+    }
+    
+    doc.save('sheet-music-converted.pdf')
+    toast.success('PDF file downloaded!')
+  }
+
+  // Function to convert edit mode to preview mode
+  const renderPreview = (text: string): string => {
+    // Remove brackets and format chords above lyrics
+    let lines = text.split('\n')
+    let result: string[] = []
+    
+    for (let line of lines) {
+      // Check if it's a section header (all caps, no chords)
+      if (line.match(/^[A-Z\s\d]+$/) && !line.includes('[')) {
+        result.push(line)
+        continue
+      }
+      
+      // Extract chords and lyrics
+      const chords: string[] = []
+      const positions: number[] = []
+      let cleanLyric = ''
+      let currentPos = 0
+      
+      // Find all [Chord] patterns and their positions
+      const parts = line.split(/(\[[^\]]+\])/)
+      
+      for (let part of parts) {
+        if (part.match(/\[([^\]]+)\]/)) {
+          // It's a chord
+          const chord = part.slice(1, -1)
+          chords.push(chord)
+          positions.push(currentPos)
+        } else {
+          // It's lyrics
+          cleanLyric += part
+          currentPos += part.length
+        }
+      }
+      
+      // Build chord line with spacing
+      if (chords.length > 0) {
+        let chordLine = ''
+        for (let i = 0; i < chords.length; i++) {
+          const pos = positions[i]
+          while (chordLine.length < pos) {
+            chordLine += ' '
+          }
+          chordLine += chords[i]
+        }
+        result.push(chordLine)
+      }
+      
+      result.push(cleanLyric)
+    }
+    
+    return result.join('\n')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -246,10 +338,10 @@ And we won't be quiet, we shout out [Eb/F]Your [Bb]praise`
                 <div className="flex items-center gap-2">
                   {outputText ? (
                     <button
-                      onClick={copyToClipboard}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium"
+                      onClick={loadExample}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
                     >
-                      Copy to Clipboard
+                      Load Example
                     </button>
                   ) : (
                     <button
@@ -261,14 +353,83 @@ And we won't be quiet, we shout out [Eb/F]Your [Bb]praise`
                   )}
                 </div>
               </div>
+
+              {/* View Toggle */}
+              {outputText && (
+                <div className="flex items-center gap-4 mb-4">
+                  <span className="text-sm font-medium text-gray-700">View:</span>
+                  <div className="inline-flex rounded-lg border border-gray-300 p-1">
+                    <button
+                      onClick={() => setViewMode('edit')}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                        viewMode === 'edit'
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-700 hover:text-gray-900'
+                      }`}
+                    >
+                      Edit Mode
+                    </button>
+                    <button
+                      onClick={() => setViewMode('preview')}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                        viewMode === 'preview'
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-700 hover:text-gray-900'
+                      }`}
+                    >
+                      Preview
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Export Buttons */}
+              {outputText && (
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(outputText)
+                      toast.success('Copied to clipboard!')
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copy
+                  </button>
+                  
+                  <button
+                    onClick={exportToTXT}
+                    className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-blue-500 hover:text-blue-600 flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Export TXT
+                  </button>
+                  
+                  <button
+                    onClick={exportToPDF}
+                    className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-blue-500 hover:text-blue-600 flex items-center gap-2"
+                  >
+                    <FileDown className="w-4 h-4" />
+                    Export PDF
+                  </button>
+                </div>
+              )}
               
               <div className="flex-1 flex flex-col">
-                <textarea
-                  value={outputText}
-                  onChange={(e) => setOutputText(e.target.value)}
-                  className="w-full h-[600px] p-4 font-mono text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-y"
-                  placeholder="Processed output will appear here..."
-                />
+                {viewMode === 'edit' ? (
+                  <textarea
+                    value={outputText}
+                    onChange={(e) => setOutputText(e.target.value)}
+                    className="w-full h-[600px] p-4 font-mono text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-y"
+                    placeholder="Processed output will appear here..."
+                  />
+                ) : (
+                  <div className="w-full h-[600px] p-4 bg-gray-900 text-gray-100 rounded-lg overflow-y-auto">
+                    <pre className="font-mono text-sm whitespace-pre">
+                      {renderPreview(outputText)}
+                    </pre>
+                  </div>
+                )}
               </div>
             </div>
 

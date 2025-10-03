@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Plus } from 'lucide-react'
+import { Copy, Plus, FileText, FileDown } from 'lucide-react'
+import { jsPDF } from 'jspdf'
 
 const CHORDS = [
   'C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B',
@@ -18,6 +19,7 @@ export default function ChordChartPage() {
   const [lyrics, setLyrics] = useState('')
   const [cursorPosition, setCursorPosition] = useState(0)
   const [showChordPicker, setShowChordPicker] = useState(false)
+  const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit')
 
   const handleLyricsClick = (e: React.MouseEvent<HTMLTextAreaElement>) => {
     const target = e.target as HTMLTextAreaElement
@@ -43,6 +45,96 @@ export default function ChordChartPage() {
   const copyToClipboard = () => {
     navigator.clipboard.writeText(lyrics)
     alert('Copied to clipboard!')
+  }
+
+  // Export functions
+  const exportToTXT = () => {
+    const blob = new Blob([lyrics], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'chord-chart.txt'
+    a.click()
+    URL.revokeObjectURL(url)
+    alert('TXT file downloaded!')
+  }
+
+  const exportToPDF = () => {
+    const doc = new jsPDF()
+    
+    // Set font to monospace for chord alignment
+    doc.setFont('courier')
+    doc.setFontSize(10)
+    
+    // Split text into lines and add to PDF
+    const lines = lyrics.split('\n')
+    let y = 20
+    
+    for (let line of lines) {
+      if (y > 280) {
+        doc.addPage()
+        y = 20
+      }
+      doc.text(line, 10, y)
+      y += 5
+    }
+    
+    doc.save('chord-chart.pdf')
+    alert('PDF file downloaded!')
+  }
+
+  // Function to convert edit mode to preview mode
+  const renderPreview = (text: string): string => {
+    // Remove brackets and format chords above lyrics
+    let lines = text.split('\n')
+    let result: string[] = []
+    
+    for (let line of lines) {
+      // Check if it's a section header (all caps, no chords)
+      if (line.match(/^[A-Z\s\d]+$/) && !line.includes('[')) {
+        result.push(line)
+        continue
+      }
+      
+      // Extract chords and lyrics
+      const chords: string[] = []
+      const positions: number[] = []
+      let cleanLyric = ''
+      let currentPos = 0
+      
+      // Find all [Chord] patterns and their positions
+      const parts = line.split(/(\[[^\]]+\])/)
+      
+      for (let part of parts) {
+        if (part.match(/\[([^\]]+)\]/)) {
+          // It's a chord
+          const chord = part.slice(1, -1)
+          chords.push(chord)
+          positions.push(currentPos)
+        } else {
+          // It's lyrics
+          cleanLyric += part
+          currentPos += part.length
+        }
+      }
+      
+      // Build chord line with spacing
+      if (chords.length > 0) {
+        let chordLine = ''
+        for (let i = 0; i < chords.length; i++) {
+          const pos = positions[i]
+          while (chordLine.length < pos) {
+            chordLine += ' '
+          }
+          chordLine += chords[i]
+        }
+        result.push(chordLine)
+      }
+      
+      result.push(cleanLyric)
+    }
+    
+    return result.join('\n')
   }
 
   return (
@@ -136,18 +228,69 @@ Click before 'worship' to add [Bb]: We [Bb]worship"
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Planning Center Preview</h2>
-              <button
-                onClick={copyToClipboard}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-              >
-                <Copy className="w-4 h-4" />
-                Copy
-              </button>
             </div>
+
+            {/* View Toggle */}
+            {lyrics && (
+              <div className="flex items-center gap-4 mb-4">
+                <span className="text-sm font-medium text-gray-700">View:</span>
+                <div className="inline-flex rounded-lg border border-gray-300 p-1">
+                  <button
+                    onClick={() => setViewMode('edit')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      viewMode === 'edit'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-700 hover:text-gray-900'
+                    }`}
+                  >
+                    Edit Mode
+                  </button>
+                  <button
+                    onClick={() => setViewMode('preview')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      viewMode === 'preview'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-700 hover:text-gray-900'
+                    }`}
+                  >
+                    Preview
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Export Buttons */}
+            {lyrics && (
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={copyToClipboard}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copy
+                </button>
+                
+                <button
+                  onClick={exportToTXT}
+                  className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-blue-500 hover:text-blue-600 flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  Export TXT
+                </button>
+                
+                <button
+                  onClick={exportToPDF}
+                  className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-blue-500 hover:text-blue-600 flex items-center gap-2"
+                >
+                  <FileDown className="w-4 h-4" />
+                  Export PDF
+                </button>
+              </div>
+            )}
 
             <div className="bg-gray-900 text-gray-100 p-6 rounded-lg h-[600px] overflow-y-auto">
               <pre className="font-mono text-sm whitespace-pre-wrap">
-                {lyrics || 'Your formatted chord chart will appear here...'}
+                {viewMode === 'edit' ? lyrics : renderPreview(lyrics) || 'Your formatted chord chart will appear here...'}
               </pre>
             </div>
 
