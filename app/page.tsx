@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Music, Sparkles, Zap, Heart, Key, Clock, FileText, Check, ArrowRight } from 'lucide-react'
+import { Music, Sparkles, Zap, Heart, Key, FileText, Check, ArrowRight } from 'lucide-react'
 
 export default function HomePage() {
   return (
@@ -11,7 +11,7 @@ export default function HomePage() {
             Essential Tools for Worship Leaders
           </h1>
           <p className="text-xl md:text-2xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
-            Everything you need to prep for Sunday, in one place. AI-powered sheet music conversion, key finding, and more.
+            Everything you need to prep for Sunday, in one place. AI-powered sheet music conversion, key finding, and chord charts.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
             <Link
@@ -95,7 +95,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Tool 1 */}
             <Link href="/tools/sheet-music" className="group">
               <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-200 hover:-translate-y-2 border border-gray-100 h-full">
@@ -129,27 +129,8 @@ export default function HomePage() {
             </Link>
 
             {/* Tool 3 */}
-            <Link href="/tools/setlist-timer" className="group">
-              <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-200 hover:-translate-y-2 border border-gray-100 h-full">
-                <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Clock className="w-7 h-7 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Setlist Timer</h3>
-                <p className="text-gray-600 leading-relaxed mb-4">
-                  Plan your worship set timing with drag-and-drop song management and automatic time calculations.
-                </p>
-                <div className="flex items-center text-orange-600 font-semibold group-hover:gap-3 gap-2 transition-all">
-                  Try it now <ArrowRight className="w-5 h-5" />
-                </div>
-              </div>
-            </Link>
-
-            {/* Tool 4 */}
             <Link href="/tools/chord-chart" className="group">
-              <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-200 hover:-translate-y-2 border border-gray-100 h-full relative overflow-hidden">
-                <div className="absolute top-4 right-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                  Premium
-                </div>
+              <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-200 hover:-translate-y-2 border border-gray-100 h-full">
                 <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                   <FileText className="w-7 h-7 text-white" />
                 </div>
@@ -193,7 +174,7 @@ export default function HomePage() {
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">All simple tools (key finder, timer)</span>
+                  <span className="text-gray-700">All simple tools (key finder, chord charts)</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
