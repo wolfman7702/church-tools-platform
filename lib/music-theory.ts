@@ -3,6 +3,15 @@
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 const FLAT_NOTES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
 
+// Convert between flats and sharps
+const FLAT_TO_SHARP: { [key: string]: string } = {
+  'Db': 'C#',
+  'Eb': 'D#',
+  'Gb': 'F#',
+  'Ab': 'G#',
+  'Bb': 'A#'
+}
+
 // Chord type patterns
 const CHORD_PATTERNS = {
   major: /^[A-G][#b]?$/,
