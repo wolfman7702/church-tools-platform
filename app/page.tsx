@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Music, Sparkles, Zap, Heart, Key, FileText, Check, ArrowRight } from 'lucide-react'
+import { Music, Sparkles, Zap, Heart, Key, FileText, Check, ArrowRight, ImageIcon } from 'lucide-react'
 
 export default function HomePage() {
   return (
@@ -95,7 +95,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Tool 1 */}
             <Link href="/tools/sheet-music" className="group">
               <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-200 hover:-translate-y-2 border border-gray-100 h-full">
@@ -139,6 +139,22 @@ export default function HomePage() {
                   Create beautiful chord charts with visual chord placement and instant Planning Center export.
                 </p>
                 <div className="flex items-center text-purple-600 font-semibold group-hover:gap-3 gap-2 transition-all">
+                  Try it now <ArrowRight className="w-5 h-5" />
+                </div>
+              </div>
+            </Link>
+
+            {/* Tool 4 */}
+            <Link href="/tools/graphics-generator" className="group">
+              <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-200 hover:-translate-y-2 border border-gray-100 h-full">
+                <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-rose-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <ImageIcon className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">Graphics Generator</h3>
+                <p className="text-gray-600 leading-relaxed mb-4">
+                  Create professional sermon and series graphics with custom themes and colors.
+                </p>
+                <div className="flex items-center text-pink-600 font-semibold group-hover:gap-3 gap-2 transition-all">
                   Try it now <ArrowRight className="w-5 h-5" />
                 </div>
               </div>

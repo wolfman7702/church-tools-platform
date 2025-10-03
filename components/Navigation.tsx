@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Menu, X, Music, Key, FileText } from 'lucide-react'
+import { Menu, X, Music, Key, FileText, ImageIcon } from 'lucide-react'
 import UsageTracker from './UsageTracker'
 
 const tools = [
   { name: 'Sheet Music Converter', href: '/tools/sheet-music', icon: Music },
   { name: 'Key Finder', href: '/tools/key-finder', icon: Key },
   { name: 'Chord Chart Generator', href: '/tools/chord-chart', icon: FileText },
+  { name: 'Graphics Generator', href: '/tools/graphics-generator', icon: ImageIcon },
 ]
 
 export default function Navigation() {
