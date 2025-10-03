@@ -28,26 +28,12 @@ export default function SheetMusicPage() {
       return
     }
 
-    // Check if user can convert
-    const { canConvert, needsEmail, isPro, conversionsUsed } = await canUserConvert()
-    
-    // If at limit and not pro, show upgrade modal
-    if (!canConvert && !isPro) {
-      setShowUpgradeModal(true)
-      return
-    }
-    
-    // If needs email (after 1st conversion), show email gate
-    if (needsEmail && !isPro) {
-      setShowEmailGate(true)
-      return
-    }
-
     setIsProcessing(true)
     setError('')
     setSuccess('')
 
     try {
+      // === EXISTING IMAGE PROCESSING CODE ===
       let combinedOutput = ''
       
       for (let i = 0; i < uploadedFiles.length; i++) {
@@ -84,12 +70,27 @@ export default function SheetMusicPage() {
       }
 
       setOutputText(combinedOutput)
+      // === END EXISTING CODE ===
       
-      // After successful processing, increment count
+      // AFTER successful processing, THEN handle usage tracking
+      const { conversionsUsed, isPro } = await canUserConvert()
+      
+      // Increment the count
       await incrementConversionCount()
       
-      // Dispatch event to update usage tracker
+      // Update UI
       window.dispatchEvent(new Event('churchkit-usage-updated'))
+      
+      // Check if they need email gate for NEXT time
+      const updatedUsage = await canUserConvert()
+      
+      if (updatedUsage.needsEmail && !isPro) {
+        // Show email gate modal for next time
+        setTimeout(() => setShowEmailGate(true), 1000)
+      } else if (!updatedUsage.canConvert && !isPro) {
+        // They've hit the limit, show upgrade modal
+        setTimeout(() => setShowUpgradeModal(true), 1000)
+      }
       
       toast.success(`Successfully processed ${uploadedFiles.length} image${uploadedFiles.length > 1 ? 's' : ''}`)
       
