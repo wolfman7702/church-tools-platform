@@ -14,6 +14,45 @@ import { detectKey, transposeText } from '@/lib/music-theory'
 
 const KEYS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
 
+// Validation function for output quality
+function validateOutput(text: string): { warnings: string[], fixed: string } {
+  const warnings: string[] = []
+  let fixed = text
+  
+  // Check for suspiciously high chord density
+  const lines = text.split('\n')
+  for (let line of lines) {
+    const chordCount = (line.match(/\[/g) || []).length
+    const wordCount = line.split(' ').length
+    
+    if (chordCount > wordCount * 0.5) {
+      warnings.push(`Line has too many chords: "${line.substring(0, 50)}..."`)
+    }
+  }
+  
+  // Check for duplicate consecutive chords
+  fixed = fixed.replace(/\[([^\]]+)\]\s*\[(\1)\]/g, '[$1]')
+  
+  return { warnings, fixed }
+}
+
+// Helper functions for manual editing
+const getCurrentLine = (text: string, cursorPos: number): number => {
+  return text.substring(0, cursorPos).split('\n').length - 1
+}
+
+const insertChordAtPosition = (text: string, position: number, chord: string): string => {
+  return text.substring(0, position) + `[${chord}]` + text.substring(position)
+}
+
+const clearChordsFromLine = (text: string, lineIndex: number): string => {
+  const lines = text.split('\n')
+  if (lineIndex >= 0 && lineIndex < lines.length) {
+    lines[lineIndex] = lines[lineIndex].replace(/\[[^\]]+\]/g, '')
+  }
+  return lines.join('\n')
+}
+
 export default function SheetMusicPage() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [outputText, setOutputText] = useState('')
@@ -26,6 +65,41 @@ export default function SheetMusicPage() {
   const [currentKey, setCurrentKey] = useState('C')
   const [targetKey, setTargetKey] = useState('C')
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit')
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([])
+  const [showChordPicker, setShowChordPicker] = useState(false)
+  const [cursorPosition, setCursorPosition] = useState(0)
+
+  // Manual editing functions
+  const handleClearChordsFromLine = () => {
+    const currentLine = getCurrentLine(outputText, cursorPosition)
+    const updated = clearChordsFromLine(outputText, currentLine)
+    setOutputText(updated)
+    toast.success('Cleared chords from current line')
+  }
+
+  const handleInsertChord = (chord: string) => {
+    const updated = insertChordAtPosition(outputText, cursorPosition, chord)
+    setOutputText(updated)
+    setShowChordPicker(false)
+    toast.success(`Inserted chord: ${chord}`)
+  }
+
+  const handleReportError = async () => {
+    try {
+      await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quality: 'poor',
+          issues: ['wrong chords', 'placement errors'],
+          output: outputText.substring(0, 200) // First 200 chars for context
+        })
+      })
+      toast.success('Error reported - thank you for the feedback!')
+    } catch (error) {
+      toast.error('Failed to report error')
+    }
+  }
 
   const processImages = async () => {
     if (uploadedFiles.length === 0) {
@@ -74,7 +148,16 @@ export default function SheetMusicPage() {
         }
       }
 
-      setOutputText(combinedOutput)
+      // Validate output quality
+      const { warnings, fixed } = validateOutput(combinedOutput)
+      setValidationWarnings(warnings)
+      
+      if (warnings.length > 0) {
+        console.warn('Output validation warnings:', warnings)
+        setOutputText(fixed) // Use the cleaned version
+      } else {
+        setOutputText(combinedOutput)
+      }
       // === END EXISTING CODE ===
       
       // AFTER successful processing, THEN handle usage tracking
@@ -414,12 +497,69 @@ And we won't be quiet, we shout out [Eb/F]Your [Bb]praise`
                   </button>
                 </div>
               )}
+
+              {/* Manual Editing Tools */}
+              {outputText && viewMode === 'edit' && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <button
+                    onClick={handleClearChordsFromLine}
+                    className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 flex items-center gap-2"
+                  >
+                    Clear Chords from Line
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowChordPicker(!showChordPicker)}
+                    className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 flex items-center gap-2"
+                  >
+                    Insert Chord Here
+                  </button>
+                  
+                  <button
+                    onClick={handleReportError}
+                    className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 flex items-center gap-2"
+                  >
+                    Report Poor Quality
+                  </button>
+                </div>
+              )}
+
+              {/* Chord Picker */}
+              {showChordPicker && (
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Select Chord to Insert:</h4>
+                  <div className="grid grid-cols-6 gap-2">
+                    {['C', 'D', 'E', 'F', 'G', 'A', 'B', 'Cm', 'Dm', 'Em', 'Fm', 'Gm', 'Am', 'Bm', 'C7', 'D7', 'E7', 'F7', 'G7', 'A7', 'B7', 'Cmaj7', 'Dmaj7', 'Emaj7', 'Fmaj7', 'Gmaj7', 'Amaj7', 'Bmaj7'].map(chord => (
+                      <button
+                        key={chord}
+                        onClick={() => handleInsertChord(chord)}
+                        className="px-3 py-2 bg-white border border-gray-300 rounded hover:bg-blue-50 hover:border-blue-500 text-sm"
+                      >
+                        {chord}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Validation Warnings */}
+              {validationWarnings.length > 0 && (
+                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <h4 className="text-sm font-medium text-yellow-800 mb-2">Quality Warnings:</h4>
+                  <ul className="text-sm text-yellow-700 space-y-1">
+                    {validationWarnings.map((warning, index) => (
+                      <li key={index}>• {warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               
               <div className="flex-1 flex flex-col">
                 {viewMode === 'edit' ? (
                   <textarea
                     value={outputText}
                     onChange={(e) => setOutputText(e.target.value)}
+                    onSelect={(e) => setCursorPosition(e.currentTarget.selectionStart)}
                     className="w-full h-[600px] p-4 font-mono text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-y"
                     placeholder="Processed output will appear here..."
                   />

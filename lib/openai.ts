@@ -66,6 +66,18 @@ FORMATTING RULES:
    - Don't break lines awkwardly
    - Match the lyric phrasing from sheet music
 
+COMMON MISTAKES TO AVOID:
+- Don't add chords where there are none in the sheet music
+- Don't place multiple chords on a single syllable unless the sheet music shows this
+- If a chord lasts for multiple words, only write it once at the beginning
+- Match the exact rhythm/timing of chord changes shown in the sheet music
+- Don't guess - if you can't clearly see a chord symbol, skip it
+
+QUALITY CHECKS:
+- Count the number of chords in the original - your output should have the same number
+- Verify chord placement matches the note timing
+- Double-check slash chords and complex chord symbols
+
 Output ONLY the formatted text. Be extremely precise - this must be copy/paste ready for Planning Center Services.`
             },
             {
