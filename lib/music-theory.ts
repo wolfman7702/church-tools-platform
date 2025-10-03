@@ -1,24 +1,7 @@
 // Music theory utilities for chord transposition and key detection
 
-const CHROMATIC_SCALE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-const CHROMATIC_SCALE_FLATS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
-
-// Convert between sharps and flats
-const SHARP_TO_FLAT: { [key: string]: string } = {
-  'C#': 'Db',
-  'D#': 'Eb',
-  'F#': 'Gb',
-  'G#': 'Ab',
-  'A#': 'Bb'
-}
-
-const FLAT_TO_SHARP: { [key: string]: string } = {
-  'Db': 'C#',
-  'Eb': 'D#',
-  'Gb': 'F#',
-  'Ab': 'G#',
-  'Bb': 'A#'
-}
+const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+const FLAT_NOTES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
 
 // Chord type patterns
 const CHORD_PATTERNS = {
@@ -48,51 +31,41 @@ const CHORD_PATTERNS = {
 
 export function transposeChord(chord: string, semitones: number): string {
   if (!chord || semitones === 0) return chord
-
-  // Handle slash chords (e.g., F/C)
-  if (CHORD_PATTERNS.slash.test(chord)) {
-    const [root, bass] = chord.split('/')
-    const transposedRoot = transposeNote(root, semitones)
-    const transposedBass = transposeNote(bass, semitones)
-    return `${transposedRoot}/${transposedBass}`
+  
+  // Handle slash chords (e.g., F/A)
+  if (chord.includes('/')) {
+    const [main, bass] = chord.split('/')
+    return `${transposeChord(main, semitones)}/${transposeChord(bass, semitones)}`
   }
-
-  // Extract root note and chord type
-  const rootMatch = chord.match(/^([A-G][#b]?)/)
-  if (!rootMatch) return chord
-
-  const root = rootMatch[1]
-  const chordType = chord.substring(root.length)
-  const transposedRoot = transposeNote(root, semitones)
-
-  return transposedRoot + chordType
-}
-
-export function transposeNote(note: string, semitones: number): string {
-  if (!note) return note
-
-  // Normalize to sharps for calculation
-  const normalizedNote = FLAT_TO_SHARP[note] || note
-  const currentIndex = CHROMATIC_SCALE.indexOf(normalizedNote)
   
-  if (currentIndex === -1) return note
-
-  let newIndex = (currentIndex + semitones) % 12
-  if (newIndex < 0) newIndex += 12
-
-  const newNote = CHROMATIC_SCALE[newIndex]
+  // Extract root note and quality
+  const match = chord.match(/^([A-G][#b]?)(.*)$/)
+  if (!match) return chord
   
-  // Convert back to flats if original was flat
-  return SHARP_TO_FLAT[newNote] || newNote
+  const [, root, quality] = match
+  
+  // Normalize to sharp notation
+  let normalizedRoot = root.replace('Db', 'C#').replace('Eb', 'D#')
+    .replace('Gb', 'F#').replace('Ab', 'G#').replace('Bb', 'A#')
+  
+  // Find index and transpose
+  let index = NOTES.indexOf(normalizedRoot)
+  if (index === -1) return chord
+  
+  index = (index + semitones + 12) % 12
+  
+  // Return with original flat/sharp preference
+  const newRoot = root.includes('b') ? FLAT_NOTES[index] : NOTES[index]
+  return newRoot + quality
 }
 
 export function transposeText(text: string, semitones: number): string {
-  if (!text || semitones === 0) return text
-
-  // Find all chord patterns [Chord] and transpose them
+  if (semitones === 0) return text
+  
+  // Find all chord patterns [Chord]
   return text.replace(/\[([^\]]+)\]/g, (match, chord) => {
-    const transposedChord = transposeChord(chord.trim(), semitones)
-    return `[${transposedChord}]`
+    const transposed = transposeChord(chord, semitones)
+    return `[${transposed}]`
   })
 }
 
@@ -105,24 +78,14 @@ export function parseChords(text: string): string[] {
   return chordMatches.map(match => match.slice(1, -1).trim())
 }
 
-export function detectKey(chords: string[]): string {
-  if (!chords || chords.length === 0) return 'C'
-
-  // Simple key detection based on chord frequency
-  const chordCounts: { [key: string]: number } = {}
+export function detectKey(text: string): string {
+  const chords = text.match(/\[([^\]]+)\]/g) || []
+  if (chords.length === 0) return 'C'
   
-  chords.forEach(chord => {
-    const root = chord.match(/^([A-G][#b]?)/)?.[1]
-    if (root) {
-      chordCounts[root] = (chordCounts[root] || 0) + 1
-    }
-  })
-
-  // Find the most common root note
-  const mostCommon = Object.entries(chordCounts)
-    .sort(([,a], [,b]) => b - a)[0]?.[0]
-
-  return mostCommon || 'C'
+  // Get first chord, strip modifiers
+  const firstChord = chords[0].replace(/[\[\]]/g, '')
+  const root = firstChord.match(/^([A-G][#b]?)/)?.[1] || 'C'
+  return root
 }
 
 export function getChordNotes(chord: string): string[] {

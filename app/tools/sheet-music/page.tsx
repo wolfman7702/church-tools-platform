@@ -1,16 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Upload, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import ImageUpload from '@/components/ImageUpload'
-import OutputEditor from '@/components/OutputEditor'
-import TransposeControls from '@/components/TransposeControls'
 import UsageTracker from '@/components/UsageTracker'
 import EmailGateModal from '@/components/EmailGateModal'
 import UpgradeModal from '@/components/UpgradeModal'
 import { UploadedFile, ProcessSheetResponse, TransposeResponse } from '@/lib/types'
 import { canUserConvert, incrementConversionCount } from '@/lib/usage-tracking'
+import { detectKey, transposeText } from '@/lib/music-theory'
+
+const KEYS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
 
 export default function SheetMusicPage() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
@@ -21,6 +22,8 @@ export default function SheetMusicPage() {
   const [showEmailGate, setShowEmailGate] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [currentKey, setCurrentKey] = useState('C')
+  const [targetKey, setTargetKey] = useState('C')
 
   const processImages = async () => {
     if (uploadedFiles.length === 0) {
@@ -95,45 +98,42 @@ export default function SheetMusicPage() {
       toast.success(`Successfully processed ${uploadedFiles.length} image${uploadedFiles.length > 1 ? 's' : ''}`)
       
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred while processing'
+      console.error('Processing failed:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Processing failed'
       setError(errorMessage)
-      toast.error(errorMessage)
+      toast.error(`Error: ${errorMessage}`)
+      alert(`Error: ${errorMessage}`)
     } finally {
       setIsProcessing(false)
     }
   }
 
-  const handleTranspose = async (semitones: number) => {
-    if (!outputText) return
-
-    try {
-      const response = await fetch('/api/transpose', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text: outputText, semitones }),
-      })
-
-      const result: TransposeResponse = await response.json()
-
-      if (result.success && result.text) {
-        setOutputText(result.text)
-        toast.success(`Transposed by ${semitones > 0 ? '+' : ''}${semitones} semitones`)
-      } else {
-        const errorMessage = result.error || 'Failed to transpose'
-        setError(errorMessage)
-        toast.error(errorMessage)
-      }
-    } catch (err) {
-      const errorMessage = 'An error occurred while transposing'
-      setError(errorMessage)
-      toast.error(errorMessage)
-    }
-  }
 
   const handleReset = () => {
     setOutputText('')
+    setCurrentKey('C')
+    setTargetKey('C')
+  }
+
+  // Detect key from output text
+  useEffect(() => {
+    if (outputText) {
+      const key = detectKey(outputText)
+      setCurrentKey(key)
+      setTargetKey(key)
+    }
+  }, [outputText])
+
+  // Handle key change
+  const handleKeyChange = (newKey: string) => {
+    const currentIndex = KEYS.indexOf(currentKey)
+    const targetIndex = KEYS.indexOf(newKey)
+    const semitones = targetIndex - currentIndex
+    
+    const transposed = transposeText(outputText, semitones)
+    setOutputText(transposed)
+    setCurrentKey(newKey)
+    setTargetKey(newKey)
   }
 
   const copyToClipboard = async () => {
@@ -176,6 +176,28 @@ export default function SheetMusicPage() {
     } else {
       toast.info('No improvements needed - chord placement looks good!')
     }
+  }
+
+  const EXAMPLE_OUTPUT = `INTRO
+[Bb] [/] [Bb2] [/] | [Bb] [/] [Fsus] [/]
+
+VERSE 1
+    [Bb]                    [Bb]
+We worship the God who was, we worship the God who is
+                     [Gm]  [F]   [Eb]
+We worship the God who ever-more will be
+
+CHORUS
+       [Bb]
+There's joy in the house of the Lord
+                               [F]      [Eb]
+There's joy in the house of the Lord to-day
+                                     [Eb/F]    [Bb]
+And we won't be quiet, we shout out Your praise`
+
+  const loadExample = () => {
+    setOutputText(EXAMPLE_OUTPUT)
+    toast.success('Example loaded!')
   }
 
   return (
@@ -254,46 +276,74 @@ export default function SheetMusicPage() {
                 <h2 className="text-xl font-semibold text-gray-900">
                   Planning Center Output
                 </h2>
-                {outputText && (
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  {outputText ? (
+                    <>
+                      <button
+                        onClick={refinePlacement}
+                        className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium flex items-center gap-2"
+                      >
+                        <span>✨</span>
+                        Refine Placement
+                      </button>
+                      <button
+                        onClick={copyToClipboard}
+                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                      >
+                        Copy to Clipboard
+                      </button>
+                    </>
+                  ) : (
                     <button
-                      onClick={refinePlacement}
-                      className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium flex items-center gap-2"
+                      onClick={loadExample}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
                     >
-                      <span>✨</span>
-                      Refine Placement
+                      Load Example
                     </button>
-                    <button
-                      onClick={copyToClipboard}
-                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                    >
-                      Copy to Clipboard
-                    </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
               
               <div className="flex-1 flex flex-col">
-                <OutputEditor
-                  value={outputText}
-                  onChange={setOutputText}
-                  placeholder="Your converted sheet music will appear here..."
-                  className="flex-1"
-                />
+                {outputText ? (
+                  <div className="bg-gray-900 text-gray-100 p-6 rounded-lg font-mono text-sm overflow-x-auto flex-1">
+                    <pre className="whitespace-pre leading-relaxed">{outputText}</pre>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-gray-500 text-center">
+                    <div>
+                      <div className="text-4xl mb-4">🎵</div>
+                      <p className="text-lg">Your converted sheet music will appear here...</p>
+                      <p className="text-sm mt-2">Upload images and click "Process Images" to get started</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Transpose Controls */}
+            {/* Key Selector */}
             {outputText && (
               <div className="card p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Transpose
                 </h3>
-                <TransposeControls
-                  text={outputText}
-                  onTranspose={handleTranspose}
-                  onReset={handleReset}
-                />
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium text-gray-700">
+                    Transpose to:
+                  </label>
+                  <select
+                    value={targetKey}
+                    onChange={(e) => handleKeyChange(e.target.value)}
+                    className="px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                  >
+                    {KEYS.map(key => (
+                      <option key={key} value={key}>{key}</option>
+                    ))}
+                  </select>
+                  <span className="text-sm text-gray-600">
+                    Current key: {currentKey}
+                  </span>
+                </div>
               </div>
             )}
           </div>

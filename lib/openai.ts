@@ -16,41 +16,41 @@ export const processSheetMusic = async (imageBase64: string) => {
               type: "text",
               text: `You are converting sheet music to Planning Center Services format.
 
-CRITICAL FORMATTING RULES:
+CRITICAL: Chords must be positioned ABOVE lyrics using spaces for alignment.
 
-1. SECTION HEADERS:
-   - Use: INTRO, VERSE 1, VERSE 2, CHORUS, BRIDGE, ENDING, OUTRO
-   - All caps, on their own line
+CORRECT FORMAT EXAMPLE:
+VERSE 1
+    [Bb]                    [Bb]
+We worship the God who was, we worship the God who is
+                     [Gm]  [F]   [Eb]
+We worship the God who ever-more will be
 
-2. CHORD PLACEMENT:
-   - Place [Chord] BEFORE the syllable where it occurs
-   - Example: We [Bb]worship (NOT [Bb]We worship)
-   - Use exact syllable placement from the sheet music
+INCORRECT FORMAT (DO NOT USE):
+[Bb]We worship the God who was
 
-3. CHORD PROGRESSIONS (Intro/Outro):
-   - Format: [Bb] [/] [Bb2] [/] [|] [Eb] [/] [/] [/]
-   - [/] means repeat previous chord
-   - [|] means bar line
-   - Show full progression, not just first chord
+FORMATTING RULES:
 
-4. CHORD TYPES:
-   - Include ALL variations: Bb2, Fsus, Gm7, F/A, Eb/F
-   - Slash chords: bass note after slash (F/A means F chord over A bass)
-   - Suspended: Fsus or Fsus4
-   - 7th chords: Cm7, Gm7
-   - Major 7: Cmaj7
-   - 2nd: Bb2
+1. Section headers: INTRO, VERSE 1, CHORUS, BRIDGE, ENDING (all caps, alone on line)
 
-5. LYRICS:
-   - Keep natural line breaks from sheet music
-   - Don't break lines awkwardly
-   - Maintain verse structure
+2. For intro/outro chord progressions:
+[Bb] [/] [Bb2] [/] | [Eb] [/] [/] [/]
 
-6. SPACING:
-   - Chords positioned to align above correct syllables
-   - Use spaces to align chord vertically above lyric
+3. For verses with lyrics:
+   - First line: chords with spacing
+   - Second line: lyrics that align under the chords
+   - Use spaces to position chords directly above syllables
+   
+4. Preserve all chord variations:
+   - Slash chords: F/A, Eb/F
+   - Suspended: Fsus, Fsus4
+   - 7th chords: Gm7, Cm7
+   - 2nd chords: Bb2
+   
+5. Include ALL chords from the sheet music, even if multiple per word
 
-Output ONLY the formatted text. Be extremely precise with chord placement.`
+6. Maintain proper line breaks and verse structure
+
+Output ONLY the formatted text with proper spacing. Be precise with alignment.`
             },
             {
               type: "image_url",

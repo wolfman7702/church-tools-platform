@@ -35,11 +35,12 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in process-sheet API:', error)
+    console.error('Full error details:', error)
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: error
       },
       { status: 500 }
     )
