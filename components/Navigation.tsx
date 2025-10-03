@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Menu, X, Music, Key, Clock, FileText, Zap } from 'lucide-react'
+import { Menu, X, Music, Key, Clock, FileText } from 'lucide-react'
+import UsageTracker from './UsageTracker'
 
 const tools = [
   { name: 'Sheet Music Converter', href: '/tools/sheet-music', icon: Music },
@@ -66,15 +67,14 @@ export default function Navigation() {
 
           {/* Right side - Usage & Upgrade */}
           <div className="hidden md:flex items-center space-x-4">
-            {/* Usage Tracker */}
-            <div className="flex items-center space-x-2 bg-gray-100 rounded-full px-3 py-1">
-              <Zap className="w-4 h-4 text-yellow-500" />
-              <span className="text-sm font-medium text-gray-700">0/3 free</span>
-            </div>
+            <UsageTracker />
             
-            <button className="bg-gradient-to-r from-primary-600 to-secondary-600 text-white px-4 py-2 rounded-lg font-medium hover:shadow-lg transition-all duration-200">
+            <Link
+              href="/pricing"
+              className="bg-gradient-to-r from-primary-600 to-secondary-600 text-white px-4 py-2 rounded-lg font-medium hover:shadow-lg transition-all duration-200"
+            >
               Upgrade to Pro
-            </button>
+            </Link>
           </div>
 
           {/* Mobile menu button */}
@@ -126,14 +126,15 @@ export default function Navigation() {
               
               <div className="pt-4 border-t border-gray-200">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Zap className="w-4 h-4 text-yellow-500" />
-                    <span className="text-sm font-medium text-gray-700">0/3 free</span>
-                  </div>
+                  <UsageTracker />
                 </div>
-                <button className="w-full bg-gradient-to-r from-primary-600 to-secondary-600 text-white px-4 py-2 rounded-lg font-medium hover:shadow-lg transition-all duration-200">
+                <Link
+                  href="/pricing"
+                  className="block w-full bg-gradient-to-r from-primary-600 to-secondary-600 text-white px-4 py-2 rounded-lg font-medium hover:shadow-lg transition-all duration-200 text-center"
+                  onClick={() => setIsMenuOpen(false)}
+                >
                   Upgrade to Pro
-                </button>
+                </Link>
               </div>
             </div>
           </div>

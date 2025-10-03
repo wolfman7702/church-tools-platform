@@ -1,67 +1,89 @@
 'use client'
 
-import { Zap } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Zap, Loader2 } from 'lucide-react'
+import { canUserConvert } from '@/lib/usage-tracking'
 
-interface UsageTrackerProps {
-  songsProcessed: number
-  isPro: boolean
-}
+export default function UsageTracker() {
+  const [usage, setUsage] = useState<{
+    conversionsUsed: number
+    isPro: boolean
+    hasEmail: boolean
+  } | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-export default function UsageTracker({ songsProcessed, isPro }: UsageTrackerProps) {
-  const maxFree = 3
-  const remaining = maxFree - songsProcessed
-  const percentage = (songsProcessed / maxFree) * 100
+  useEffect(() => {
+    loadUsage()
+  }, [])
 
-  if (isPro) {
+  const loadUsage = async () => {
+    try {
+      const result = await canUserConvert()
+      setUsage({
+        conversionsUsed: result.conversionsUsed,
+        isPro: result.isPro,
+        hasEmail: !result.needsEmail
+      })
+    } catch (error) {
+      console.error('Failed to load usage:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Listen for storage events to update across tabs
+  useEffect(() => {
+    const handleStorageChange = () => {
+      loadUsage()
+    }
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('churchkit-usage-updated', handleStorageChange)
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('churchkit-usage-updated', handleStorageChange)
+    }
+  }, [])
+
+  if (isLoading) {
     return (
-      <div className="flex items-center space-x-2 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg px-4 py-3">
-        <Zap className="w-5 h-5 text-yellow-500" />
-        <div>
-          <div className="text-sm font-medium text-gray-900">Pro Member ✨</div>
-          <div className="text-xs text-gray-600">Unlimited songs</div>
-        </div>
+      <div className="flex items-center gap-2 text-gray-600">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        <span className="text-sm">Loading...</span>
       </div>
     )
   }
 
-  if (remaining <= 0) {
+  if (!usage) return null
+
+  if (usage.isPro) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-          <span className="text-sm font-medium text-red-800">Limit reached!</span>
-        </div>
-        <p className="text-xs text-red-600 mt-1">
-          Upgrade to Pro for unlimited songs
-        </p>
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full">
+        <Zap className="w-4 h-4" />
+        <span className="text-sm font-semibold">Pro Member</span>
       </div>
     )
   }
+
+  const remainingConversions = Math.max(0, 3 - usage.conversionsUsed)
+  const progressPercent = (usage.conversionsUsed / 3) * 100
 
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-2">
+    <div className="flex items-center gap-3">
+      <div className="flex flex-col items-end">
         <span className="text-sm font-medium text-gray-700">
-          {remaining} free songs remaining
+          {remainingConversions}/3 free
         </span>
-        <span className="text-xs text-gray-500">
-          {songsProcessed}/{maxFree}
-        </span>
+        {!usage.hasEmail && usage.conversionsUsed >= 1 && (
+          <span className="text-xs text-gray-500">Add email for more</span>
+        )}
       </div>
       
-      {/* Progress Bar */}
-      <div className="w-full bg-gray-200 rounded-full h-2">
-        <div 
-          className="bg-gradient-to-r from-primary-500 to-secondary-500 h-2 rounded-full transition-all duration-300"
-          style={{ width: `${Math.min(percentage, 100)}%` }}
-        ></div>
+      <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-300"
+          style={{ width: `${progressPercent}%` }}
+        />
       </div>
-      
-      {remaining === 1 && (
-        <p className="text-xs text-amber-600 mt-2">
-          Last free song! Consider upgrading for unlimited access.
-        </p>
-      )}
     </div>
   )
 }

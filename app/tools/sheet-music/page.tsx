@@ -2,20 +2,25 @@
 
 import { useState } from 'react'
 import { Upload, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { toast } from 'sonner'
 import ImageUpload from '@/components/ImageUpload'
 import OutputEditor from '@/components/OutputEditor'
 import TransposeControls from '@/components/TransposeControls'
 import UsageTracker from '@/components/UsageTracker'
+import EmailGateModal from '@/components/EmailGateModal'
+import UpgradeModal from '@/components/UpgradeModal'
 import { UploadedFile, ProcessSheetResponse, TransposeResponse } from '@/lib/types'
+import { canUserConvert, incrementConversionCount } from '@/lib/usage-tracking'
 
 export default function SheetMusicPage() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [outputText, setOutputText] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
-  const [songsProcessed, setSongsProcessed] = useState(0)
-  const [isPro, setIsPro] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showEmailGate, setShowEmailGate] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
 
   const processImages = async () => {
     if (uploadedFiles.length === 0) {
@@ -23,9 +28,18 @@ export default function SheetMusicPage() {
       return
     }
 
-    // Check usage limit
-    if (songsProcessed >= 3 && !isPro) {
-      setError('You\'ve reached your free limit. Please upgrade to Pro for unlimited conversions.')
+    // Check if user can convert
+    const { canConvert, needsEmail, isPro, conversionsUsed } = await canUserConvert()
+    
+    // If at limit and not pro, show upgrade modal
+    if (!canConvert && !isPro) {
+      setShowUpgradeModal(true)
+      return
+    }
+    
+    // If needs email (after 1st conversion), show email gate
+    if (needsEmail && !isPro) {
+      setShowEmailGate(true)
       return
     }
 
@@ -70,11 +84,19 @@ export default function SheetMusicPage() {
       }
 
       setOutputText(combinedOutput)
-      setSongsProcessed(prev => prev + uploadedFiles.length)
-      setSuccess(`Successfully processed ${uploadedFiles.length} image${uploadedFiles.length > 1 ? 's' : ''}`)
+      
+      // After successful processing, increment count
+      await incrementConversionCount()
+      
+      // Dispatch event to update usage tracker
+      window.dispatchEvent(new Event('churchkit-usage-updated'))
+      
+      toast.success(`Successfully processed ${uploadedFiles.length} image${uploadedFiles.length > 1 ? 's' : ''}`)
       
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred while processing')
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred while processing'
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsProcessing(false)
     }
@@ -96,13 +118,16 @@ export default function SheetMusicPage() {
 
       if (result.success && result.text) {
         setOutputText(result.text)
-        setSuccess(`Transposed by ${semitones > 0 ? '+' : ''}${semitones} semitones`)
-        setTimeout(() => setSuccess(''), 3000)
+        toast.success(`Transposed by ${semitones > 0 ? '+' : ''}${semitones} semitones`)
       } else {
-        setError(result.error || 'Failed to transpose')
+        const errorMessage = result.error || 'Failed to transpose'
+        setError(errorMessage)
+        toast.error(errorMessage)
       }
     } catch (err) {
-      setError('An error occurred while transposing')
+      const errorMessage = 'An error occurred while transposing'
+      setError(errorMessage)
+      toast.error(errorMessage)
     }
   }
 
@@ -113,10 +138,9 @@ export default function SheetMusicPage() {
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(outputText)
-      setSuccess('Copied to clipboard!')
-      setTimeout(() => setSuccess(''), 3000)
+      toast.success('Copied to clipboard!')
     } catch (err) {
-      setError('Failed to copy to clipboard')
+      toast.error('Failed to copy to clipboard')
     }
   }
 
@@ -135,7 +159,7 @@ export default function SheetMusicPage() {
 
         {/* Usage Tracker */}
         <div className="max-w-2xl mx-auto mb-8">
-          <UsageTracker songsProcessed={songsProcessed} isPro={isPro} />
+          <UsageTracker />
         </div>
 
         {/* Error/Success Messages */}
@@ -269,6 +293,24 @@ export default function SheetMusicPage() {
             </div>
           </div>
         </div>
+
+        {/* Modals */}
+        <EmailGateModal
+          isOpen={showEmailGate}
+          onClose={() => setShowEmailGate(false)}
+          onEmailSubmit={(email) => {
+            setUserEmail(email)
+            setShowEmailGate(false)
+            // After email is submitted, allow them to process
+            processImages()
+          }}
+        />
+
+        <UpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          conversionsUsed={3}
+        />
       </div>
     </div>
   )
