@@ -4,6 +4,10 @@ const CHROMATIC_SCALE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', '
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 const FLAT_NOTES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
 
+// Key signature preferences
+const SHARP_KEYS = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#']
+const FLAT_KEYS = ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Cb']
+
 // Convert between flats and sharps
 const FLAT_TO_SHARP: { [key: string]: string } = {
   'Db': 'C#',
@@ -39,42 +43,44 @@ const CHORD_PATTERNS = {
   fullyDiminished: /^[A-G][#b]?dim7$/
 }
 
-export function transposeChord(chord: string, semitones: number): string {
+export function transposeChord(chord: string, semitones: number, preferFlats: boolean = false): string {
   if (!chord || semitones === 0) return chord
   
   // Handle slash chords (e.g., F/A)
   if (chord.includes('/')) {
     const [main, bass] = chord.split('/')
-    return `${transposeChord(main, semitones)}/${transposeChord(bass, semitones)}`
+    return `${transposeChord(main, semitones, preferFlats)}/${transposeChord(bass, semitones, preferFlats)}`
   }
   
-  // Extract root note and quality
+  // Extract root and quality
   const match = chord.match(/^([A-G][#b]?)(.*)$/)
   if (!match) return chord
   
   const [, root, quality] = match
   
-  // Normalize to sharp notation
-  let normalizedRoot = root.replace('Db', 'C#').replace('Eb', 'D#')
-    .replace('Gb', 'F#').replace('Ab', 'G#').replace('Bb', 'A#')
-  
-  // Find index and transpose
-  let index = NOTES.indexOf(normalizedRoot)
+  // Normalize to sharp scale
+  const normalizedRoot = FLAT_TO_SHARP[root] || root
+  let index = CHROMATIC_SCALE.indexOf(normalizedRoot)
   if (index === -1) return chord
   
+  // Transpose
   index = (index + semitones + 12) % 12
   
-  // Return with original flat/sharp preference
-  const newRoot = root.includes('b') ? FLAT_NOTES[index] : NOTES[index]
+  // Choose flat or sharp based on target key
+  const FLAT_SCALE = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
+  const newRoot = preferFlats ? FLAT_SCALE[index] : CHROMATIC_SCALE[index]
+  
   return newRoot + quality
 }
 
-export function transposeText(text: string, semitones: number): string {
+export function transposeText(text: string, semitones: number, targetKey: string): string {
   if (semitones === 0) return text
   
-  // Find all chord patterns [Chord]
+  // Determine if target key uses flats
+  const preferFlats = FLAT_KEYS.includes(targetKey)
+  
   return text.replace(/\[([^\]]+)\]/g, (match, chord) => {
-    const transposed = transposeChord(chord, semitones)
+    const transposed = transposeChord(chord, semitones, preferFlats)
     return `[${transposed}]`
   })
 }

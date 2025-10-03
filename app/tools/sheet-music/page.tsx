@@ -98,11 +98,13 @@ export default function SheetMusicPage() {
       toast.success(`Successfully processed ${uploadedFiles.length} image${uploadedFiles.length > 1 ? 's' : ''}`)
       
     } catch (err) {
-      console.error('Processing failed:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Processing failed'
-      setError(errorMessage)
-      toast.error(`Error: ${errorMessage}`)
-      alert(`Error: ${errorMessage}`)
+      console.error('Processing error:', err)
+      // Only show error if we didn't get any output
+      if (!outputText) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to process image. Please try again.'
+        setError(errorMessage)
+        toast.error(errorMessage)
+      }
     } finally {
       setIsProcessing(false)
     }
@@ -130,7 +132,7 @@ export default function SheetMusicPage() {
     const targetIndex = KEYS.indexOf(newKey)
     const semitones = targetIndex - currentIndex
     
-    const transposed = transposeText(outputText, semitones)
+    const transposed = transposeText(outputText, semitones, newKey)
     setOutputText(transposed)
     setCurrentKey(newKey)
     setTargetKey(newKey)
@@ -145,55 +147,20 @@ export default function SheetMusicPage() {
     }
   }
 
-  const refinePlacement = () => {
-    if (!outputText) return
 
-    // Analyze and improve chord placement
-    let refined = outputText
-    
-    // Fix common issues
-    refined = refined
-      // Ensure chords are properly spaced before syllables
-      .replace(/([a-zA-Z])\[([^\]]+)\]/g, '$1 [$2]')
-      // Fix chords that are too close to words
-      .replace(/\[([^\]]+)\]([a-zA-Z])/g, '[$1] $2')
-      // Ensure section headers are properly formatted
-      .replace(/^(verse|chorus|bridge|intro|outro|ending)\s*\d*/gmi, (match) => 
-        match.toUpperCase().replace(/\s+(\d+)/, ' $1')
-      )
-      // Fix chord progressions spacing
-      .replace(/\[([^\]]+)\]\s*\[\/\]/g, '[$1] [/]')
-      // Ensure proper line breaks after section headers
-      .replace(/^(VERSE \d+|CHORUS|BRIDGE|INTRO|OUTRO|ENDING)$/gm, '$1\n')
-      // Remove extra spaces
-      .replace(/\s+/g, ' ')
-      .replace(/\n\s+/g, '\n')
-      .replace(/\s+\n/g, '\n')
+  const EXAMPLE_OUTPUT = `Intro
+[Bb] [/] [Bb2] [/] | [Bb] [/] [Fsus] [/] | [Eb] [/] [/] [/]
 
-    if (refined !== outputText) {
-      setOutputText(refined)
-      toast.success('Chord placement refined!')
-    } else {
-      toast.info('No improvements needed - chord placement looks good!')
-    }
-  }
+Verse 1
+We [Bb]worship the God who was, we [Bb]worship the God who is
+We worship the God who [Gm]ever - [F4]more [Eb2]will be
+He [Bb]opened the prison doors, He parted the raging sea
+My God, he [Gm]holds the [F4]vic - [Eb2]tory, yeah
 
-  const EXAMPLE_OUTPUT = `INTRO
-[Bb] [/] [Bb2] [/] | [Bb] [/] [Fsus] [/]
-
-VERSE 1
-    [Bb]                    [Bb]
-We worship the God who was, we worship the God who is
-                     [Gm]  [F]   [Eb]
-We worship the God who ever-more will be
-
-CHORUS
-       [Bb]
-There's joy in the house of the Lord
-                               [F]      [Eb]
-There's joy in the house of the Lord to-day
-                                     [Eb/F]    [Bb]
-And we won't be quiet, we shout out Your praise`
+Chorus 1
+[Bb] There's joy in the house of the Lord
+There's joy in the house of the [F]Lord to - [Eb]day
+And we won't be quiet, we shout out [Eb/F]Your [Bb]praise`
 
   const loadExample = () => {
     setOutputText(EXAMPLE_OUTPUT)
@@ -278,21 +245,12 @@ And we won't be quiet, we shout out Your praise`
                 </h2>
                 <div className="flex items-center gap-2">
                   {outputText ? (
-                    <>
-                      <button
-                        onClick={refinePlacement}
-                        className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium flex items-center gap-2"
-                      >
-                        <span>✨</span>
-                        Refine Placement
-                      </button>
-                      <button
-                        onClick={copyToClipboard}
-                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                      >
-                        Copy to Clipboard
-                      </button>
-                    </>
+                    <button
+                      onClick={copyToClipboard}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium"
+                    >
+                      Copy to Clipboard
+                    </button>
                   ) : (
                     <button
                       onClick={loadExample}
@@ -305,19 +263,12 @@ And we won't be quiet, we shout out Your praise`
               </div>
               
               <div className="flex-1 flex flex-col">
-                {outputText ? (
-                  <div className="bg-gray-900 text-gray-100 p-6 rounded-lg font-mono text-sm overflow-x-auto flex-1">
-                    <pre className="whitespace-pre leading-relaxed">{outputText}</pre>
-                  </div>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center text-gray-500 text-center">
-                    <div>
-                      <div className="text-4xl mb-4">🎵</div>
-                      <p className="text-lg">Your converted sheet music will appear here...</p>
-                      <p className="text-sm mt-2">Upload images and click "Process Images" to get started</p>
-                    </div>
-                  </div>
-                )}
+                <textarea
+                  value={outputText}
+                  onChange={(e) => setOutputText(e.target.value)}
+                  className="w-full h-[600px] p-4 font-mono text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-y"
+                  placeholder="Processed output will appear here..."
+                />
               </div>
             </div>
 
