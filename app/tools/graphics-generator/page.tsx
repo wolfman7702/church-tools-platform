@@ -57,24 +57,24 @@ export default function GraphicsGeneratorPage() {
     // Render based on theme
     switch (options.theme) {
       case 'modern':
-        renderModernTheme(ctx, options, colors)
+        renderModernTheme(ctx, canvas, options, colors)
         break
       case 'minimal':
-        renderMinimalTheme(ctx, options, colors)
+        renderMinimalTheme(ctx, canvas, options, colors)
         break
       case 'bold':
-        renderBoldTheme(ctx, options, colors)
+        renderBoldTheme(ctx, canvas, options, colors)
         break
       case 'elegant':
-        renderElegantTheme(ctx, options, colors)
+        renderElegantTheme(ctx, canvas, options, colors)
         break
       case 'dark':
-        renderDarkTheme(ctx, options, colors)
+        renderDarkTheme(ctx, canvas, options, colors)
         break
     }
   }
 
-  const renderModernTheme = (ctx: CanvasRenderingContext2D, opts: GraphicOptions, colors: any) => {
+  const renderModernTheme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, opts: GraphicOptions, colors: any) => {
     // Gradient background
     const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height)
     gradient.addColorStop(0, colors.primary)
@@ -123,7 +123,7 @@ export default function GraphicsGeneratorPage() {
     }
   }
 
-  const renderMinimalTheme = (ctx: CanvasRenderingContext2D, opts: GraphicOptions, colors: any) => {
+  const renderMinimalTheme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, opts: GraphicOptions, colors: any) => {
     // White background
     ctx.fillStyle = '#FFFFFF'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -161,7 +161,7 @@ export default function GraphicsGeneratorPage() {
     }
   }
 
-  const renderBoldTheme = (ctx: CanvasRenderingContext2D, opts: GraphicOptions, colors: any) => {
+  const renderBoldTheme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, opts: GraphicOptions, colors: any) => {
     // Solid color background
     ctx.fillStyle = colors.primary
     ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -198,7 +198,7 @@ export default function GraphicsGeneratorPage() {
     }
   }
 
-  const renderElegantTheme = (ctx: CanvasRenderingContext2D, opts: GraphicOptions, colors: any) => {
+  const renderElegantTheme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, opts: GraphicOptions, colors: any) => {
     // Soft gradient
     const gradient = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, 100, canvas.width / 2, canvas.height / 2, 800)
     gradient.addColorStop(0, '#FFFFFF')
@@ -247,7 +247,7 @@ export default function GraphicsGeneratorPage() {
     }
   }
 
-  const renderDarkTheme = (ctx: CanvasRenderingContext2D, opts: GraphicOptions, colors: any) => {
+  const renderDarkTheme = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, opts: GraphicOptions, colors: any) => {
     // Dark background
     ctx.fillStyle = '#111827'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
