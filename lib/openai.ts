@@ -14,29 +14,43 @@ export const processSheetMusic = async (imageBase64: string) => {
           content: [
             {
               type: "text",
-              text: `You are a music transcription expert. Analyze this sheet music and extract:
+              text: `You are converting sheet music to Planning Center Services format.
 
-1. All chord symbols with precise placement
-2. Lyrics with syllable-by-syllable chord alignment
-3. Song structure sections using standard names: VERSE 1, VERSE 2, CHORUS, BRIDGE, etc.
+CRITICAL FORMATTING RULES:
 
-Output in Planning Center Services format following these rules:
-- Chords in square brackets: [C], [G7], [F/C], [Am]
-- Place the chord bracket immediately before the syllable where the chord change occurs
-- Break words into syllables when chords change mid-word: [C]A-[F/C]maz-[C]ing
-- Section headers in ALL CAPS on their own line (use standard names: VERSE 1, VERSE 2, CHORUS, BRIDGE, INTRO, OUTRO, etc.)
-- Preserve exact lyric spacing and line breaks
-- Ensure chord placement is precise - chords should align with the exact syllable where the change happens
+1. SECTION HEADERS:
+   - Use: INTRO, VERSE 1, VERSE 2, CHORUS, BRIDGE, ENDING, OUTRO
+   - All caps, on their own line
 
-Example output:
-VERSE 1
-[C]My [F/C]Je-[C]sus, I [G]love [G7]Thee
-[C]I [F/C]know [C]Thou art [G]mine[G7]
+2. CHORD PLACEMENT:
+   - Place [Chord] BEFORE the syllable where it occurs
+   - Example: We [Bb]worship (NOT [Bb]We worship)
+   - Use exact syllable placement from the sheet music
 
-CHORUS
-[C]For [G]Thee all the [Am]plea-[F]sures of [C]sin I re-[G]sign
+3. CHORD PROGRESSIONS (Intro/Outro):
+   - Format: [Bb] [/] [Bb2] [/] [|] [Eb] [/] [/] [/]
+   - [/] means repeat previous chord
+   - [|] means bar line
+   - Show full progression, not just first chord
 
-Output ONLY the formatted text with no explanations, markdown, or extra commentary.`
+4. CHORD TYPES:
+   - Include ALL variations: Bb2, Fsus, Gm7, F/A, Eb/F
+   - Slash chords: bass note after slash (F/A means F chord over A bass)
+   - Suspended: Fsus or Fsus4
+   - 7th chords: Cm7, Gm7
+   - Major 7: Cmaj7
+   - 2nd: Bb2
+
+5. LYRICS:
+   - Keep natural line breaks from sheet music
+   - Don't break lines awkwardly
+   - Maintain verse structure
+
+6. SPACING:
+   - Chords positioned to align above correct syllables
+   - Use spaces to align chord vertically above lyric
+
+Output ONLY the formatted text. Be extremely precise with chord placement.`
             },
             {
               type: "image_url",

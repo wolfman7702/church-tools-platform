@@ -145,6 +145,39 @@ export default function SheetMusicPage() {
     }
   }
 
+  const refinePlacement = () => {
+    if (!outputText) return
+
+    // Analyze and improve chord placement
+    let refined = outputText
+    
+    // Fix common issues
+    refined = refined
+      // Ensure chords are properly spaced before syllables
+      .replace(/([a-zA-Z])\[([^\]]+)\]/g, '$1 [$2]')
+      // Fix chords that are too close to words
+      .replace(/\[([^\]]+)\]([a-zA-Z])/g, '[$1] $2')
+      // Ensure section headers are properly formatted
+      .replace(/^(verse|chorus|bridge|intro|outro|ending)\s*\d*/gmi, (match) => 
+        match.toUpperCase().replace(/\s+(\d+)/, ' $1')
+      )
+      // Fix chord progressions spacing
+      .replace(/\[([^\]]+)\]\s*\[\/\]/g, '[$1] [/]')
+      // Ensure proper line breaks after section headers
+      .replace(/^(VERSE \d+|CHORUS|BRIDGE|INTRO|OUTRO|ENDING)$/gm, '$1\n')
+      // Remove extra spaces
+      .replace(/\s+/g, ' ')
+      .replace(/\n\s+/g, '\n')
+      .replace(/\s+\n/g, '\n')
+
+    if (refined !== outputText) {
+      setOutputText(refined)
+      toast.success('Chord placement refined!')
+    } else {
+      toast.info('No improvements needed - chord placement looks good!')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -222,12 +255,21 @@ export default function SheetMusicPage() {
                   Planning Center Output
                 </h2>
                 {outputText && (
-                  <button
-                    onClick={copyToClipboard}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                  >
-                    Copy to Clipboard
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={refinePlacement}
+                      className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium flex items-center gap-2"
+                    >
+                      <span>✨</span>
+                      Refine Placement
+                    </button>
+                    <button
+                      onClick={copyToClipboard}
+                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                    >
+                      Copy to Clipboard
+                    </button>
+                  </div>
                 )}
               </div>
               

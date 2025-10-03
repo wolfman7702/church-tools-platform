@@ -27,10 +27,23 @@ const CHORD_PATTERNS = {
   seventh: /^[A-G][#b]?7$/,
   majorSeventh: /^[A-G][#b]?maj7$/,
   minorSeventh: /^[A-G][#b]?m7$/,
-  suspended: /^[A-G][#b]?sus[24]$/,
+  suspended: /^[A-G][#b]?sus[24]?$/,
+  suspended2: /^[A-G][#b]?sus2$/,
+  suspended4: /^[A-G][#b]?sus4$/,
   diminished: /^[A-G][#b]?dim$/,
   augmented: /^[A-G][#b]?aug$/,
-  slash: /^[A-G][#b]?\/[A-G][#b]?$/
+  slash: /^[A-G][#b]?\/[A-G][#b]?$/,
+  ninth: /^[A-G][#b]?9$/,
+  eleventh: /^[A-G][#b]?11$/,
+  thirteenth: /^[A-G][#b]?13$/,
+  add2: /^[A-G][#b]?2$/,
+  add4: /^[A-G][#b]?4$/,
+  add9: /^[A-G][#b]?add9$/,
+  major9: /^[A-G][#b]?maj9$/,
+  minor9: /^[A-G][#b]?m9$/,
+  dominant9: /^[A-G][#b]?9$/,
+  halfDiminished: /^[A-G][#b]?m7b5$/,
+  fullyDiminished: /^[A-G][#b]?dim7$/
 }
 
 export function transposeChord(chord: string, semitones: number): string {
@@ -178,4 +191,40 @@ export function getKeySignature(key: string): string[] {
   }
 
   return keySignatures[key] || []
+}
+
+// Get all 12 keys for key selector
+export function getAllKeys(): Array<{ value: string; label: string }> {
+  return [
+    { value: 'C', label: 'C' },
+    { value: 'C#', label: 'C# / Db' },
+    { value: 'Db', label: 'C# / Db' },
+    { value: 'D', label: 'D' },
+    { value: 'D#', label: 'D# / Eb' },
+    { value: 'Eb', label: 'D# / Eb' },
+    { value: 'E', label: 'E' },
+    { value: 'F', label: 'F' },
+    { value: 'F#', label: 'F# / Gb' },
+    { value: 'Gb', label: 'F# / Gb' },
+    { value: 'G', label: 'G' },
+    { value: 'G#', label: 'G# / Ab' },
+    { value: 'Ab', label: 'G# / Ab' },
+    { value: 'A', label: 'A' },
+    { value: 'A#', label: 'A# / Bb' },
+    { value: 'Bb', label: 'A# / Bb' },
+    { value: 'B', label: 'B' }
+  ]
+}
+
+// Calculate semitone difference between two keys
+export function getSemitoneDifference(fromKey: string, toKey: string): number {
+  const normalizedFrom = FLAT_TO_SHARP[fromKey] || fromKey
+  const normalizedTo = FLAT_TO_SHARP[toKey] || toKey
+  
+  const fromIndex = CHROMATIC_SCALE.indexOf(normalizedFrom)
+  const toIndex = CHROMATIC_SCALE.indexOf(normalizedTo)
+  
+  if (fromIndex === -1 || toIndex === -1) return 0
+  
+  return (toIndex - fromIndex + 12) % 12
 }
